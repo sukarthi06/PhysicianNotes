@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Data\Protos\phynoterecording.proto" />
+    <None Remove="Data\Protos\recordings.proto" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhysicianNotes.Application\PhysicianNotes.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+	  <PackageReference Include="Azure.Storage.Blobs" Version="12.29.1" />
+	  <PackageReference Include="Google.Protobuf" Version="3.35.1" />
+	  <PackageReference Include="Grpc.Net.Client" Version="2.80.0" />
+	  <PackageReference Include="Grpc.Net.ClientFactory" Version="2.80.0" />
+	  <PackageReference Include="Grpc.Tools" Version="2.82.0">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	  </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.7.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.7.0" />
+	  <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.10" />
+	  <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.10" />
+	  <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.10" />
+	  <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.10" />
+	  <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+	  <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.10" />
+	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+	  <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
+	  <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+	  <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.1" />
+	  <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+	  <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Data\Protos\phynoterecording.proto" GrpcServices="Client" />
+    <Protobuf Include="Data\Protos\recordings.proto" GrpcServices="Client" />
+  </ItemGroup>
+
+</Project>

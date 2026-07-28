@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+option csharp_namespace = "ClinicalGrpcService.Grpc.Protos";
+
+package physiciansnoterecording;
+
+service PhysiciansNoteRecording{
+	rpc Save(PhysicianNoteRecordingRequest) returns (PhysicianNoteRecordingResponse);
+	rpc GetByRecordingId(GetByRecordingIdRequest) returns (GetByRecordingIdResponse);
+	rpc IsReady(IsReadyRequest) returns (IsReadyResponse);
+}
+
+message PhysicianNoteRecordingDto{
+	string physician_note_id = 1;
+	string recording_id = 2;
+	string storage_path = 3;
+}
+
+message PhysicianNoteRecordingRequest{
+	PhysicianNoteRecordingDto physician_note_ecording = 1;
+}
+
+message PhysicianNoteRecordingResponse{
+	bool is_success = 1;
+}
+
+message GetByRecordingIdRequest{
+	string recording_id = 1;
+}
+
+message GetByRecordingIdResponse{
+	PhysicianNoteRecordingDto physician_note_ecording = 1;
+}
+
+message IsReadyRequest{
+	string recording_id = 1;
+}
+
+message IsReadyResponse{
+	bool is_success = 1;
+}
