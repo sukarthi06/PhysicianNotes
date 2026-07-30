@@ -20,12 +20,12 @@
 	  <PackageReference Include="Google.Protobuf" Version="3.35.1" />
 	  <PackageReference Include="Grpc.Net.Client" Version="2.80.0" />
 	  <PackageReference Include="Grpc.Net.ClientFactory" Version="2.80.0" />
-	  <PackageReference Include="Grpc.Tools" Version="2.82.0">
+	  <PackageReference Include="Grpc.Tools" Version="2.83.0">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	  </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.AI" Version="10.7.0" />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.7.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.8.3" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.8.3" />
 	  <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.10" />
 	  <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.10" />
 	  <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.10" />

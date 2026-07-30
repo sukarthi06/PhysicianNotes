@@ -1,8 +1,5 @@
 using PhysicianNotes.Api;
 using PhysicianNotes.Api.Endpoints;
-using PhysicianNotes.Application.UseCases.GeneratePhysicianNote;
-using PhysicianNotes.Domain.Clinical;
-using PhysicianNotes.Domain.Transcripts;
 using PhysicianNotes.Infrastructure.DependencyInjection;
 using Scalar.AspNetCore;
 
@@ -18,18 +15,18 @@ builder.Host.AddHostInfrastructure(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAppServices(builder.Configuration);
 
-#region "CORS"
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAngularClient", policy =>
-    {
-        policy.WithOrigins("http://localhost:4200") // your Angular dev server
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials(); // needed if you send cookies/auth headers
-    });
-});
-#endregion
+//#region "CORS"
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowAngularClient", policy =>
+//    {
+//        policy.WithOrigins("http://localhost:4200") // your Angular dev server
+//              .AllowAnyMethod()
+//              .AllowAnyHeader()
+//              .AllowCredentials(); // needed if you send cookies/auth headers
+//    });
+//});
+//#endregion
 
 var app = builder.Build();
 
@@ -41,13 +38,13 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Local"))
     app.UseSwagger();
     app.UseSwaggerUI();    
 }
-app.UseCors("AllowAngularClient");
+app.UseCors("AllowedClientOrigins");
 
 //if (!app.Environment.IsDevelopment() || !app.Environment.IsEnvironment("Local"))
 //{
 //    app.UseHttpsRedirection();
 //}
-    
+
 
 
 //app.MapPost(
