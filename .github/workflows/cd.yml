@@ -1,0 +1,164 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: physiciannotes-api-deploy
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: rg-stt
+  WEBAPP_NAME: stt-physiciannotesapi-dev
+  IMAGE_NAME: physiciannotesapi-comp
+
+jobs:
+  deploy:
+    name: Deploy to Azure App Service
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Log source checkout status
+        run: |
+          echo "::notice title=Checkout completed::Deploying commit $(git rev-parse --short HEAD)."
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log Azure login status
+        run: |
+          subscription="$(az account show --query name --output tsv)"
+          echo "::notice title=Azure login completed::Authenticated to subscription: $subscription."
+
+      - name: Build and push image to ACR
+        run: |
+          az acr login --name ${{ vars.ACR_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
+          docker buildx build -f PhysicianNotes.Api/Dockerfile \
+            -t ${{ vars.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.event.workflow_run.head_sha }} \
+            --push .
+          echo "::notice title=Container image published::Image pushed to ACR for commit ${{ github.event.workflow_run.head_sha }}."
+
+      - name: Set OpenAI API key
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          az webapp config appsettings set \
+            --name ${{ env.WEBAPP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --settings "OpenAI__ApiKey=$OPENAI_API_KEY"
+          echo "::notice title=OpenAI API key updated::OpenAI__ApiKey app setting was updated."
+
+      - name: Set OpenAI model and endpoint
+        env:
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          OPENAI_ENDPOINT: ${{ vars.OPENAI_ENDPOINT }}
+        run: |
+          az webapp config appsettings set \
+            --name ${{ env.WEBAPP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --settings "OpenAI__Model=$OPENAI_MODEL" "OpenAI__Endpoint=$OPENAI_ENDPOINT"
+          echo "::notice title=OpenAI model and endpoint updated::OpenAI__Model and OpenAI__Endpoint app settings were updated."
+
+      - name: Set CORS allowed origins
+        env:
+          CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
+        run: |
+          az webapp config appsettings set \
+            --name ${{ env.WEBAPP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --settings "Cors__AllowedOrigins=$CORS_ALLOWED_ORIGINS"
+          echo "::notice title=CORS allowed origins updated::Cors__AllowedOrigins app setting was updated."
+
+      - name: Set Storage connection string
+        env:
+          STORAGE_CONNECTION_STRING: ${{ secrets.STORAGE_CONNECTION_STRING }}
+        run: |
+          az webapp config appsettings set \
+            --name ${{ env.WEBAPP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --settings "Azure__StorageConnectionString=$STORAGE_CONNECTION_STRING"
+          echo "::notice title=Connection string updated::Azure__StorageConnectionString app setting was updated."
+
+      - name: Set Recording gRPC service address
+        env:
+          RECORDING_GRPC_ADDRESS: ${{ vars.RECORDING_GRPC_ADDRESS }}
+        run: |
+          az webapp config appsettings set \
+            --name ${{ env.WEBAPP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --settings "RecordingGrpcService__Address=$RECORDING_GRPC_ADDRESS"
+          echo "::notice title=Recording gRPC address updated::RecordingGrpcService__Address app setting was updated."
+
+      - name: Set Clinical gRPC service address
+        env:
+          CLINICAL_GRPC_ADDRESS: ${{ vars.CLINICAL_GRPC_ADDRESS }}
+        run: |
+          az webapp config appsettings set \
+            --name ${{ env.WEBAPP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --settings "ClinicalGrpcService__Address=$CLINICAL_GRPC_ADDRESS"
+          echo "::notice title=Clinical gRPC address updated::ClinicalGrpcService__Address app setting was updated."
+
+      - name: Deploy image to App Service
+        run: |
+          az webapp config container set \
+            --name ${{ env.WEBAPP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --container-image-name ${{ vars.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.event.workflow_run.head_sha }} \
+            --container-registry-url https://${{ vars.ACR_LOGIN_SERVER }}
+          echo "::notice title=App Service container updated::Web App container image set to commit ${{ github.event.workflow_run.head_sha }}."
+
+      - name: Restart App Service
+        run: |
+          az webapp restart --name ${{ env.WEBAPP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
+          echo "::notice title=App Service restarted::Restart triggered so the new image is pulled and started."
+
+      - name: Verify deployed image and health
+        run: |
+          set -euo pipefail
+
+          app="${{ env.WEBAPP_NAME }}"
+          rg="${{ env.RESOURCE_GROUP }}"
+          expected_image="${{ vars.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.event.workflow_run.head_sha }}"
+
+          actual_image="$(az webapp show --name "$app" --resource-group "$rg" --query siteConfig.linuxFxVersion --output tsv)"
+          actual_image="${actual_image#DOCKER|}"
+
+          if [[ "$actual_image" != "$expected_image" ]]; then
+            echo "::error title=Image mismatch::Configured image ($actual_image) does not match expected ($expected_image)."
+            exit 1
+          fi
+          echo "::notice title=Image verified::Web App is configured with the expected image."
+
+          host="$(az webapp show --name "$app" --resource-group "$rg" --query defaultHostName --output tsv)"
+
+          for attempt in {1..30}; do
+            state="$(az webapp show --name "$app" --resource-group "$rg" --query state --output tsv)"
+            status_code="$(curl -s -o /dev/null -w '%{http_code}' "https://$host/" || true)"
+
+            if [[ "$state" == "Running" && "$status_code" == "200" ]]; then
+              echo "::notice title=Deployment verified::App Service is running and responding with HTTP 200."
+              exit 0
+            fi
+
+            echo "Web App state: $state, HTTP status: $status_code. Waiting..."
+            sleep 10
+          done
+
+          echo "Deployment verification timed out."
+          exit 1
