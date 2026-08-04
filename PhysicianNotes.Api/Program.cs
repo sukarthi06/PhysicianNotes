@@ -98,6 +98,8 @@ app.UseCors("AllowedClientOrigins");
 //        return Results.Ok(soapNote);
 //    });
 
+app.MapGet("/health", () => Results.Ok());
+
 app.MapPhysicianNoteServicesEndpoints();
 
 app.Run();

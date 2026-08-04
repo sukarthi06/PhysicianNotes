@@ -149,7 +149,7 @@ jobs:
 
           for attempt in {1..30}; do
             state="$(az webapp show --name "$app" --resource-group "$rg" --query state --output tsv)"
-            status_code="$(curl -s -o /dev/null -w '%{http_code}' "https://$host/" || true)"
+            status_code="$(curl -s -o /dev/null -w '%{http_code}' "https://$host/health" || true)"
 
             if [[ "$state" == "Running" && "$status_code" == "200" ]]; then
               echo "::notice title=Deployment verified::App Service is running and responding with HTTP 200."
